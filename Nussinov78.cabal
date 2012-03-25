@@ -64,7 +64,7 @@ library
 
 
 
-executable Nussinov
+executable Nussinov78
   build-depends:
     base >= 4 && < 5,
     mtl,
@@ -87,4 +87,10 @@ executable Nussinov
   if flag (llvm)
     ghc-options:
       -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
+
+
+
+source-repository head
+  type: git
+  location: git://github.com/choener/Nussinov78
 
