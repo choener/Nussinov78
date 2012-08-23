@@ -50,15 +50,17 @@ library
     primitive      == 0.4.*   ,
     vector         == 0.9.*   ,
     PrimitiveArray == 0.2.2.0 ,
-    BiobaseXNA     == 0.6.2.5 ,
-    ADPfusion      == 0.0.1.2
+--    BiobaseXNA     == 0.6.2.5 ,
+    ADPfusion      == 0.1.* ,
+    ghc-prim
   exposed-modules:
-    BioInf.Nussinov78
+--    BioInf.Nussinov78
+    BioInf.GAPlike
   ghc-options:
     -O2
-    -funbox-strict-fields
-    -funfolding-use-threshold100
-    -funfolding-keeness-factor100
+--    -funbox-strict-fields
+--    -funfolding-use-threshold100
+--    -funfolding-keeness-factor100
   if flag (llvm)
     ghc-options:
       -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
@@ -71,16 +73,10 @@ executable Nussinov78
   main-is:
     Nussinov78.hs
   other-modules:
-    BioInf.Nussinov78
+--    BioInf.Nussinov78
   ghc-options:
-    -rtsopts
-    -O2
-    -funbox-strict-fields
-    -funfolding-use-threshold100
-    -funfolding-keeness-factor100
-  if flag (llvm)
-    ghc-options:
-      -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
+    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-constprop -optlo-O3 -optlo-std-compile-opts
+--    -O2 -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
 
 
 
