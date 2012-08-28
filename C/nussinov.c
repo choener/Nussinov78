@@ -1,16 +1,19 @@
-//#include <stdlib.h>
-//#include <stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+int nussinov (int, char *);
 
 int main () {
-  char *p;
+  char p[10000];
   int n;
   int e;
-  while (1==scanf ("%as", &p)) { // only GNU C
+  while (1==scanf ("%9999s", &p)) { // only GNU C
     n = strlen(p);
     e = nussinov (n, p);
     printf ("%s %d\n", p, e);
-    free(p);
-    p=0;
+    //free(p);
+    //p=0;
   };
   return 0;
 }
