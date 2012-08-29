@@ -27,7 +27,6 @@ import Data.PrimitiveArray.Unboxed.VectorZero as PA
 import ADP.Fusion.GAPlike2
 
 import Debug.Trace
---import ADP.Fusion.Monadic.Internal (Apply(..))
 
 
 
@@ -53,10 +52,10 @@ type BLA m =
 
 aPairmax :: (Monad m) => BLA m
 aPairmax = (left,right,pair,split,h) where
-  left    b s = s
-  right s b   = s
-  pair  l s r = if basepair l r then 1+s else s
-  split  l r  = l+r
+  left    b s = traceShow ("left",b,s) s
+  right s b   = traceShow ("right",s,b) s
+  pair  l s r = traceShow ("pair",l,s,r) $ if basepair l r then 1+s else s
+  split  l r  = traceShow ("split",l,r) $ l+r
   h = SM.foldl' max 0
   basepair l r = f l r where
     f 'C' 'G' = True
