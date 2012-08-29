@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -19,21 +20,21 @@ import Data.Vector.Fusion.Stream.Size
 import "PrimitiveArray" Data.Array.Repa.Index
 import Data.Char (toUpper, ord)
 import Prelude as P
+import qualified Data.Vector.Unboxed as VU
 
 import Data.PrimitiveArray as PA
-import Data.PrimitiveArray.Unboxed.Zero as PA
-import ADP.Fusion.GAPlike
+import Data.PrimitiveArray.Unboxed.VectorZero as PA
+import ADP.Fusion.GAPlike2
 
 import Debug.Trace
-import ADP.Fusion.Monadic.Internal (Apply(..))
+--import ADP.Fusion.Monadic.Internal (Apply(..))
 
 
 
 -- the grammar
 
-gNussinov (nil,left,right,pair,split,h) empty b s =
-  ( s, (  nil   <<< empty     |||
-          left  <<< b % s     |||
+gNussinov (left,right,pair,split,h) s b =
+  ( s, (  left  <<< b % s     |||
           right <<< s % b     |||
           pair  <<< b % s % b |||
           split <<< s % s     ... h)
@@ -41,8 +42,7 @@ gNussinov (nil,left,right,pair,split,h) empty b s =
 {-# INLINE gNussinov #-}
 
 type BLA m =
-  ( () -> Int
-  , Char -> Int  -> Int
+  ( Char -> Int  -> Int
   , Int  -> Char -> Int
   , Char -> Int  -> Char -> Int
   , Int  -> Int  -> Int
@@ -52,8 +52,7 @@ type BLA m =
 -- pairmax algebra
 
 aPairmax :: (Monad m) => BLA m
-aPairmax = (nil,left,right,pair,split,h) where
-  nil ()      = 0
+aPairmax = (left,right,pair,split,h) where
   left    b s = s
   right s b   = s
   pair  l s r = if basepair l r then 1+s else s
@@ -71,38 +70,34 @@ aPairmax = (nil,left,right,pair,split,h) where
 {-# INLINE aPairmax #-}
 
 
-
 nussinov78 inp = arr ! (Z:.0:.n) where
   (_,Z:._:.n) = bounds arr
   len = P.length inp
-  arr = runST (nussinov78Fill . PA.fromList (Z:.0) (Z:.len-1) . P.map toUpper $ inp)
+  arr = runST (nussinov78Fill . VU.fromList . P.map toUpper $ inp)
 {-# NOINLINE nussinov78 #-}
-
 
 -- let's fill a table
 
-nussinov78Fill :: Arr0 DIM1 Char -> ST s (Arr0 DIM2 Int)
+nussinov78Fill :: VU.Vector Char -> ST s (Arr0 DIM2 Int)
 nussinov78Fill inp = do
-  let n = let (_,Z:.l) = bounds inp in l+1
+  let n = VU.length inp +1
   s <- fromAssocsM (Z:.0:.0) (Z:.n:.n) 0 []
-  let b = PAsingle inp
+  let b = Chr inp
       {-# INLINE b #-}
-  let e = Empty
-  fillTable $ gNussinov aPairmax e b s
+  fillTable $ gNussinov aPairmax s b
   freeze s
 {-# INLINE nussinov78Fill #-}
 
-
-fillTable :: PrimMonad m => (MArr0 (PrimState m) DIM2 Int, (DIM2 -> m Int)) -> m ()
+fillTable :: PrimMonad m => (MArr0 (PrimState m) DIM2 Int, ((Int,Int) -> m Int)) -> m ()
 fillTable (tbl, f) = do
   let (_,Z:.n:._) = boundsM tbl
   forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
-    v <- f (Z:.i:.j)
-    writeM tbl (Z:.i:.j) v
-    return ()
+    v <- f (i,j)
+    v `seq` writeM tbl (Z:.i:.j) v
 {-# INLINE fillTable #-}
 
 
+{-
 data Empty = Empty
 
 type instance TopIdx Empty = Int
@@ -128,6 +123,6 @@ instance (Monad m, MkStream m x, SC x, TopIdx x ~ (t0:.Int)) => MkStream m (x:.E
   {-# INLINE mkStreamInner #-}
   mkStream = mkStreamInner
   {-# INLINE mkStream #-}
-
+-}
 
 
