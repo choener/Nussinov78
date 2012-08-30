@@ -58,9 +58,6 @@ library
     BioInf.GAPlike
   ghc-options:
     -O2
---    -funbox-strict-fields
---    -funfolding-use-threshold100
---    -funfolding-keeness-factor100
   if flag (llvm)
     ghc-options:
       -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
@@ -69,14 +66,12 @@ library
 
 executable Nussinov78
   build-depends:
---    from above
   main-is:
     Nussinov78.hs
   other-modules:
 --    BioInf.Nussinov78
   ghc-options:
-    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-constprop -optlo-O3 -optlo-std-compile-opts
---    -O2 -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
+    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-O3 -optlo-std-compile-opts
 
 
 

@@ -31,5 +31,4 @@ doNussinov78 inp = do
 -}
 
 doGAPlike inp = do
-  putStrLn inp
-  print $ G.nussinov78 inp
+  printf "%s %d\n" inp (G.nussinov78 inp)
