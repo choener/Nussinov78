@@ -42,17 +42,17 @@ gNussinov (left,right,pair,split,h) s b =
 
 -- The signature
 
-type Signature m =
-  ( Char -> Int  -> Int
-  , Int  -> Char -> Int
-  , Char -> Int  -> Char -> Int
-  , Int  -> Int  -> Int
-  , SM.Stream m Int -> m Int
+type Signature m a r =
+  ( Char -> a    -> a
+  , a    -> Char -> a
+  , Char -> a    -> Char -> a
+  , a    -> a    -> a
+  , SM.Stream m a -> m r
   )
 
 -- pairmax algebra
 
-aPairmax :: (Monad m) => Signature m
+aPairmax :: (Monad m) => Signature m Int Int
 aPairmax = (left,right,pair,split,h) where
   left    b s = s
   right s b   = s
@@ -70,7 +70,26 @@ aPairmax = (left,right,pair,split,h) where
   {-# INLINE basepair #-}
 {-# INLINE aPairmax #-}
 
+aPretty :: (Monad m) => Signature m String [String]
+aPretty = (left,right,pair,split,h) where
+  left  b s   = "." P.++ s
+  right   s b = s P.++ "."
+  pair  l s r = "(" P.++ s P.++ ")"
+  split l   r = l P.++ r
+  h = SM.toList
+{-# INLINE aPretty #-}
 
+(<**) a b tbl = (left,right,pair,split,h) where
+  (lefta,righta,paira,splita,ha) = a
+  (leftb,rightb,pairb,splitb,hb) = b
+  left b (sa,sb) = (lefta b sa, leftb b sb)
+  right (sa,sb) b = (righta sa b, rightb sb b)
+  pair b (sa,sb) c = (paira b sa c, pairb b sb c)
+  split (la,lb) (ra,rb) = (paira la ra, pairb lb rb)
+  h xs = [ (xa,xb)
+         | (xa,xb) <- xs
+         , xa == tbl
+         ]
 
 -- * Boilerplate and driver, will be moved to library
 
