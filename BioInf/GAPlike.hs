@@ -79,17 +79,20 @@ aPretty = (left,right,pair,split,h) where
   h = SM.toList
 {-# INLINE aPretty #-}
 
-(<**) a b tbl = (left,right,pair,split,h) where
+aProduct :: (Monad m) => Signature m as at -> Signature m bs bt -> Signature m (as,bs) bt
+aProduct a b tbl = (left,right,pair,split,h) where
   (lefta,righta,paira,splita,ha) = a
   (leftb,rightb,pairb,splitb,hb) = b
   left b (sa,sb) = (lefta b sa, leftb b sb)
   right (sa,sb) b = (righta sa b, rightb sb b)
   pair b (sa,sb) c = (paira b sa c, pairb b sb c)
   split (la,lb) (ra,rb) = (paira la ra, pairb lb rb)
+  h = undefined
+  {-
   h xs = [ (xa,xb)
          | (xa,xb) <- xs
          , xa == tbl
-         ]
+         ] -}
 
 -- * Boilerplate and driver, will be moved to library
 
@@ -120,4 +123,7 @@ fillTable (Tbl tbl, f) = do
     v `seq` writeM tbl (Z:.i:.j) v
 {-# INLINE fillTable #-}
 
+-- * backtracking
 
+-- nussinov78BT :: VU.Vector Char -> Arr0 DIM2 Int -> [String]
+-- nussinov78BT inp tbl = gNussinov ((<**) aPairmax aPretty tbl) tbl (Chr inp) (0,VU.length inp)
