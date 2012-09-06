@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
@@ -36,7 +37,7 @@ gNussinov (left,right,pair,split,h) s b =
   ( s, (  left  <<< b % s     |||
           right <<< s % b     |||
           pair  <<< b % s % b |||
-          split <<< s % s     ... h)
+          split <<< s % s     ..@ h)
   )
 {-# INLINE gNussinov #-}
 
@@ -47,7 +48,15 @@ type Signature m a r =
   , a    -> Char -> a
   , Char -> a    -> Char -> a
   , a    -> a    -> a
-  , SM.Stream m a -> m r
+  , (Int,Int) -> SM.Stream m a -> m r
+  )
+
+type CombSignature m x a r =
+  ( Char -> a    -> a
+  , a    -> Char -> a
+  , Char -> a    -> Char -> a
+  , a    -> a    -> a
+  , Arr0 DIM2 x -> (Int,Int) -> SM.Stream m a -> m r
   )
 
 -- pairmax algebra
@@ -58,7 +67,7 @@ aPairmax = (left,right,pair,split,h) where
   right s b   = s
   pair  l s r = if basepair l r then 1+s else s
   split  l r  = l+r
-  h = SM.foldl' max 0
+  h _ = SM.foldl' max 0
   basepair l r = f l r where
     f 'C' 'G' = True
     f 'G' 'C' = True
@@ -70,29 +79,30 @@ aPairmax = (left,right,pair,split,h) where
   {-# INLINE basepair #-}
 {-# INLINE aPairmax #-}
 
-aPretty :: (Monad m) => Signature m String [String]
+aPretty :: (Monad m) => Signature m String (SM.Stream m String)
 aPretty = (left,right,pair,split,h) where
   left  b s   = "." P.++ s
   right   s b = s P.++ "."
   pair  l s r = "(" P.++ s P.++ ")"
   split l   r = l P.++ r
-  h = SM.toList
+  h _ = return . id
 {-# INLINE aPretty #-}
 
-aProduct :: (Monad m) => Signature m as at -> Signature m bs bt -> Signature m (as,bs) bt
+aProduct
+  :: (Monad m, VU.Unbox as, Eq as)
+  => Signature m as at
+  -> Signature m bs bt
+  -> Arr0 DIM2 as
+  -> CombSignature m as (as,bs) (SM.Stream m (as,bs))
 aProduct a b tbl = (left,right,pair,split,h) where
   (lefta,righta,paira,splita,ha) = a
   (leftb,rightb,pairb,splitb,hb) = b
   left b (sa,sb) = (lefta b sa, leftb b sb)
   right (sa,sb) b = (righta sa b, rightb sb b)
   pair b (sa,sb) c = (paira b sa c, pairb b sb c)
-  split (la,lb) (ra,rb) = (paira la ra, pairb lb rb)
-  h = undefined
-  {-
-  h xs = [ (xa,xb)
-         | (xa,xb) <- xs
-         , xa == tbl
-         ] -}
+  split (la,lb) (ra,rb) = (splita la ra, splitb lb rb)
+  h tbl (i,j) xs = return . SM.filter ((tbl!(Z:.i:.j) ==) . fst) $ xs
+
 
 -- * Boilerplate and driver, will be moved to library
 
@@ -125,5 +135,5 @@ fillTable (Tbl tbl, f) = do
 
 -- * backtracking
 
--- nussinov78BT :: VU.Vector Char -> Arr0 DIM2 Int -> [String]
--- nussinov78BT inp tbl = gNussinov ((<**) aPairmax aPretty tbl) tbl (Chr inp) (0,VU.length inp)
+nussinov78BT :: VU.Vector Char -> Arr0 DIM2 Int -> [String]
+nussinov78BT inp tbl = undefined -- gNussinov (aProduct aPairmax aPretty tbl) tbl (Chr inp) (0,VU.length inp)
