@@ -33,8 +33,9 @@ import Debug.Trace
 
 -- the grammar
 
-gNussinov (left,right,pair,split,h) s b =
-  ( s, (  left  <<< b % s     |||
+gNussinov (empty,left,right,pair,split,h) s b e =
+  ( s, (  empty <<< e         |||
+          left  <<< b % s     |||
           right <<< s % b     |||
           pair  <<< b % s % b |||
           split <<< s % s     ..@ h)
@@ -44,7 +45,8 @@ gNussinov (left,right,pair,split,h) s b =
 -- The signature
 
 type Signature m a r =
-  ( Char -> a    -> a
+  ( ()   -> a
+  , Char -> a    -> a
   , a    -> Char -> a
   , Char -> a    -> Char -> a
   , a    -> a    -> a
@@ -52,7 +54,8 @@ type Signature m a r =
   )
 
 type CombSignature m x a r =
-  ( Char -> a    -> a
+  ( ()   -> a
+  , Char -> a    -> a
   , a    -> Char -> a
   , Char -> a    -> Char -> a
   , a    -> a    -> a
@@ -62,12 +65,13 @@ type CombSignature m x a r =
 -- pairmax algebra
 
 aPairmax :: (Monad m) => Signature m Int Int
-aPairmax = (left,right,pair,split,h) where
+aPairmax = (empty,left,right,pair,split,h) where
+  empty   _   = 0
   left    b s = s
   right s b   = s
   pair  l s r = if basepair l r then 1+s else s
   split  l r  = l+r
-  h _ = SM.foldl' max 0
+  h _ = SM.foldl1' max
   basepair l r = f l r where
     f 'C' 'G' = True
     f 'G' 'C' = True
@@ -80,7 +84,8 @@ aPairmax = (left,right,pair,split,h) where
 {-# INLINE aPairmax #-}
 
 aPretty :: (Monad m) => Signature m String (SM.Stream m String)
-aPretty = (left,right,pair,split,h) where
+aPretty = (empty,left,right,pair,split,h) where
+  empty _     = ""
   left  b s   = "." P.++ s
   right   s b = s P.++ "."
   pair  l s r = "(" P.++ s P.++ ")"
@@ -94,9 +99,10 @@ aProduct
   -> Signature m bs bt
   -> Arr0 DIM2 as
   -> CombSignature m as (as,bs) (SM.Stream m (as,bs))
-aProduct a b tbl = (left,right,pair,split,h) where
-  (lefta,righta,paira,splita,ha) = a
-  (leftb,rightb,pairb,splitb,hb) = b
+aProduct a b tbl = (empty,left,right,pair,split,h) where
+  (emptya,lefta,righta,paira,splita,ha) = a
+  (emptyb,leftb,rightb,pairb,splitb,hb) = b
+  empty ()       = (emptya (), emptyb ())
   left b (sa,sb) = (lefta b sa, leftb b sb)
   right (sa,sb) b = (righta sa b, rightb sb b)
   pair b (sa,sb) c = (paira b sa c, pairb b sb c)
@@ -121,7 +127,9 @@ nussinov78Fill inp = do
   let t = Tbl t' :: TBL s
   let b = Chr inp
       {-# INLINE b #-}
-  fillTable $ gNussinov aPairmax t b
+  let e = Empty
+      {-# INLINE e #-}
+  fillTable $ gNussinov aPairmax t b e
   freeze t'
 {-# INLINE nussinov78Fill #-}
 
