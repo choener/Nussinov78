@@ -70,6 +70,7 @@ aPairmax = (empty,left,right,pair,split,h) where
   left    b s = s
   right s b   = s
   pair  l s r = if basepair l r then 1+s else s
+  {-# INLINE [0] pair #-}
   split  l r  = l+r
   h _ = SM.foldl1' max
   basepair l r = f l r where
