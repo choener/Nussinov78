@@ -22,9 +22,10 @@ import "PrimitiveArray" Data.Array.Repa.Index
 import Data.Char (toUpper, ord)
 import Prelude as P
 import qualified Data.Vector.Unboxed as VU
+import Data.Primitive
 
 import Data.PrimitiveArray as PA
-import Data.PrimitiveArray.Unboxed.VectorZero as PA
+import Data.PrimitiveArray.Unboxed.Zero as PA
 import ADP.Fusion.GAPlike2
 
 import Debug.Trace
@@ -95,7 +96,7 @@ aPretty = (empty,left,right,pair,split,h) where
 {-# INLINE aPretty #-}
 
 aProduct
-  :: (Monad m, VU.Unbox as, Eq as)
+  :: (Monad m, VU.Unbox as, Prim as, Eq as)
   => Signature m as at
   -> Signature m bs bt
   -> Arr0 DIM2 as
