@@ -120,13 +120,13 @@ nussinov78 inp = arr ! (Z:.0:.n) where
   arr = runST (nussinov78Fill . VU.fromList . P.map toUpper $ inp)
 {-# NOINLINE nussinov78 #-}
 
-type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
+-- type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
 
 nussinov78Fill :: forall s . VU.Vector Char -> ST s (Arr0 DIM2 Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   t' <- fromAssocsM (Z:.0:.0) (Z:.n:.n) 0 []
-  let t = Tbl t' :: TBL s
+  let t = MTbl t' -- :: TBL s
   let b = Chr inp
       {-# INLINE b #-}
   let e = Empty
@@ -135,8 +135,8 @@ nussinov78Fill inp = do
   freeze t'
 {-# INLINE nussinov78Fill #-}
 
-fillTable :: PrimMonad m => (Tbl E (MArr0 (PrimState m) DIM2 Int), ((Int,Int) -> m Int)) -> m ()
-fillTable (Tbl tbl, f) = do
+fillTable :: PrimMonad m => (MTbl E (MArr0 (PrimState m) DIM2 Int), ((Int,Int) -> m Int)) -> m ()
+fillTable (MTbl tbl, f) = do
   let (_,Z:.n:._) = boundsM tbl
   forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
     v <- f (i,j)
