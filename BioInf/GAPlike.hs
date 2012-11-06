@@ -26,7 +26,7 @@ import Data.Primitive
 
 import Data.PrimitiveArray as PA
 import Data.PrimitiveArray.Unboxed.Zero as PA
-import ADP.Fusion.GAPlike2
+import ADP.Fusion.GAPlike
 
 import Debug.Trace
 
