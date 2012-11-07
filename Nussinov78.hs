@@ -21,7 +21,9 @@ main = do
     [] -> do xs <- fmap lines getContents
              mapM_ doNussinov78 xs -}
     ["gaplike"] -> do xs <- fmap lines getContents
-                      mapM_ doGAPlike xs
+                      mapM_ (doGAPlike 0) xs
+    ["gaplike",k] -> do xs <- fmap lines getContents
+                        mapM_ (doGAPlike (read k)) xs
 
 {-
 doNussinov78 inp = do
@@ -30,6 +32,8 @@ doNussinov78 inp = do
   mapM_ (\(e,bt) -> putStr bt >> printf " %5d\n" e) $ take 10 rs
 -}
 
-doGAPlike inp = do
+doGAPlike :: Int -> String -> IO ()
+doGAPlike k inp = do
   let (n,bt) = G.nussinov78 inp
   n `seq` printf "%s %d\n" inp n
+  mapM_ putStrLn $ take k bt
