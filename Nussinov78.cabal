@@ -18,15 +18,14 @@ description:
                 .
                 This algorithm is simple enough to be used as a tutorial-type
                 example. It also shows that efficient code is possible. The
-                ADPfusion code compared to C is slower by a factor of only 1.8.
+                ADPfusion code compared to C is slower by a factor of only 1.2.
                 We plan to improve upon this.
                 .
                 A number of helper functions currently present in
                 BioInf.Nussinov78 will later move in their own library.
                 .
-                If possible, build using the GHC llvm backend, and GHC-7.2.2.
-                GHC-7.4.x produces very bad code on my system, please benchmark
-                using 7.2.2.
+                Build using GHC-7.6.1, the new code generator and llvm for best
+                performance.
                 .
                 For comparison, a version of the algorithm written in C is
                 available under C/nussinov.c. Use at least
@@ -36,10 +35,6 @@ description:
 
 Extra-Source-Files:
   C/nussinov.c
-
-Flag llvm
-  description: build using llvm backend
-  default: True
 
 
 
@@ -57,10 +52,7 @@ library
 --    BioInf.Nussinov78
     BioInf.GAPlike
   ghc-options:
-    -O2
-  if flag (llvm)
-    ghc-options:
-      -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
+    -O2 -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
 
 
 
