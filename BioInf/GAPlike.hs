@@ -27,7 +27,7 @@ import qualified Data.Vector.Unboxed as VU
 
 import ADP.Fusion.GAPlike
 import Data.PrimitiveArray as PA
-import Data.PrimitiveArray.Unboxed.Zero as PA
+import Data.PrimitiveArray.Zero.Unboxed as PA
 
 import Debug.Trace
 import Control.Arrow (second)
