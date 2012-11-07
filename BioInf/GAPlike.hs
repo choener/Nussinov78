@@ -53,7 +53,7 @@ gNussinov (empty,left,right,pair,split,h) s b e =
           right <<<     s % b |||
           pair  <<< b % s % b |||
           split <<<  s' % s'  ... h)
-  ) where s' = transTo s
+  ) where s' = transToN s
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
