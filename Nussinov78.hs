@@ -31,5 +31,5 @@ doNussinov78 inp = do
 -}
 
 doGAPlike inp = do
-  let n = G.nussinov78 inp
+  let (n,bt) = G.nussinov78 inp
   n `seq` printf "%s %d\n" inp n
