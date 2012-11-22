@@ -1,5 +1,5 @@
 name:           Nussinov78
-version:        0.1.0.0
+version:        0.1.0.1
 author:         Christian Hoener zu Siederdissen, 2011-2012
 copyright:      Christian Hoener zu Siederdissen, 2011-2012
 homepage:       http://www.tbi.univie.ac.at/~choener/adpfusion
@@ -41,12 +41,11 @@ Extra-Source-Files:
 library
   build-depends:
     base >= 4 && < 5,
-    mtl            >= 2,
+    mtl            >= 2       ,
     primitive      == 0.5.*   ,
     vector         == 0.10.*  ,
-    PrimitiveArray == 0.4.0.0 ,
---    BiobaseXNA     == 0.6.2.5 ,
-    ADPfusion      == 0.1.* ,
+    PrimitiveArray >= 0.4.0.1 ,
+    ADPfusion      == 0.1.*   ,
     ghc-prim
   exposed-modules:
 --    BioInf.Nussinov78
