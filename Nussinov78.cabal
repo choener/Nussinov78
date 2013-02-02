@@ -44,14 +44,14 @@ library
     mtl            >= 2       ,
     primitive      == 0.5.*   ,
     vector         == 0.10.*  ,
-    PrimitiveArray >= 0.4.0.1 ,
-    ADPfusion      == 0.1.*   ,
+    PrimitiveArray >= 0.5.0.0 ,
+    ADPfusion      == 0.1.1.* ,
     ghc-prim
   exposed-modules:
 --    BioInf.Nussinov78
     BioInf.GAPlike
   ghc-options:
-    -O2 -fllvm -optlo-O3 -optlo-inline -optlo-std-compile-opts
+    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-O3 -optlo-std-compile-opts -optlo-inline -fllvm-tbaa
 
 
 
@@ -62,7 +62,7 @@ executable Nussinov78
   other-modules:
 --    BioInf.Nussinov78
   ghc-options:
-    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-O3 -optlo-std-compile-opts
+    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-O3 -optlo-std-compile-opts -optlo-inline -fllvm-tbaa
 
 
 

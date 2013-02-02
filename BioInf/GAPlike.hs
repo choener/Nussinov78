@@ -25,9 +25,10 @@ import Prelude as P
 import "PrimitiveArray" Data.Array.Repa.Index
 import qualified Data.Vector.Unboxed as VU
 
-import ADP.Fusion.GAPlike
+import ADP.Fusion.GAPlike hiding (E)
+import qualified ADP.Fusion.GAPlike as GAP
 import Data.PrimitiveArray as PA
-import Data.PrimitiveArray.Zero.Unboxed as PA
+import Data.PrimitiveArray.Zero as Z
 
 import Debug.Trace
 import Control.Arrow (second)
@@ -64,7 +65,6 @@ aPairmax = (empty,left,right,pair,split,h) where
   left    b s = s
   right s b   = s
   pair  l s r = if basepair l r then 1+s else -999999
-  {-# INLINE [0] pair #-}
   split  l r  = l+r
   h = SM.foldl1' max
   basepair l r = f l r where
@@ -75,8 +75,7 @@ aPairmax = (empty,left,right,pair,split,h) where
     f 'G' 'U' = True
     f 'U' 'G' = True
     f _   _   = False
-  {-# INLINE basepair #-}
-{-# INLINE aPairmax #-}
+{-# INLINE [0] aPairmax #-}
 
 aPretty :: (Monad m) => Signature m String (SM.Stream m String)
 aPretty = (empty,left,right,pair,split,h) where
@@ -128,12 +127,12 @@ nussinov78 inp = (arr ! (Z:.0:.n),bt) where
   len  = P.length inp
   vinp = VU.fromList . P.map toUpper $ inp
   arr  = runST (nussinov78Fill $ vinp)
-  bt   = backtrack vinp arr
+  bt   = [] -- backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
 -- type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
 
-nussinov78Fill :: forall s . VU.Vector Char -> ST s (Arr0 DIM2 Int)
+nussinov78Fill :: forall s . VU.Vector Char -> ST s (Z.U DIM2 Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   t' <- fromAssocsM (Z:.0:.0) (Z:.n:.n) 0 []
@@ -144,7 +143,7 @@ nussinov78Fill inp = do
   freeze t'
 {-# NOINLINE nussinov78Fill #-}
 
-fillTable :: PrimMonad m => (MTbl E (MArr0 (PrimState m) DIM2 Int), ((Int,Int) -> m Int)) -> m ()
+fillTable :: PrimMonad m => (MTbl GAP.E (Z.MU m DIM2 Int), ((Int,Int) -> m Int)) -> m ()
 fillTable (MTbl tbl, f) = do
   let (_,Z:.n:._) = boundsM tbl
   forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
@@ -154,11 +153,13 @@ fillTable (MTbl tbl, f) = do
 
 -- * backtracking
 
-backtrack (inp :: VU.Vector Char) (tbl :: PA.Arr0 DIM2 Int) = unId . SM.toList . unId $ g (0,n) where
+{-
+backtrack (inp :: VU.Vector Char) (tbl :: Z.U DIM2 Int) = unId . SM.toList . unId $ g (0,n) where
   n = VU.length inp
   c = Chr inp
   e = Empty
   t = bttblE tbl (g :: BTfun Id String)
   (_,g) = gNussinov (aPairmax <** aPretty) t c e
 {-# INLINE backtrack #-}
+-}
 
