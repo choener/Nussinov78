@@ -49,11 +49,14 @@ type Signature m a r =
 -- the grammar
 
 gNussinov (empty,left,right,pair,split,h) s b e =
-  ( s, (  empty <<< e         |||
+  ( s, (
+          empty <<< e         |||
           left  <<< b % s     |||
+--            (\ij -> SM.map (\s -> apply left $ getArg s) $ mkStream (None:.b:.s) ij) ... h
           right <<<     s % b |||
           pair  <<< b % s % b |||
-          split <<<  s' % s'  ... h)
+          split <<<  s' % s'  ... h
+      )
   ) where s' = transToN s
 {-# INLINE gNussinov #-}
 
@@ -67,15 +70,18 @@ aPairmax = (empty,left,right,pair,split,h) where
   pair  l s r = if basepair l r then 1+s else -999999
   split  l r  = l+r
   h = SM.foldl1' max
-  basepair l r = f l r where
-    f 'C' 'G' = True
-    f 'G' 'C' = True
-    f 'A' 'U' = True
-    f 'U' 'A' = True
-    f 'G' 'U' = True
-    f 'U' 'G' = True
-    f _   _   = False
-{-# INLINE [0] aPairmax #-}
+{-# INLINE aPairmax #-}
+
+basepair :: Char -> Char -> Bool
+basepair l r = f l r where
+  f 'C' 'G' = True
+  f 'G' 'C' = True
+  f 'A' 'U' = True
+  f 'U' 'A' = True
+  f 'G' 'U' = True
+  f 'U' 'G' = True
+  f _   _   = False
+{-# INLINE basepair #-}
 
 aPretty :: (Monad m) => Signature m String (SM.Stream m String)
 aPretty = (empty,left,right,pair,split,h) where
@@ -127,7 +133,7 @@ nussinov78 inp = (arr ! (Z:.0:.n),bt) where
   len  = P.length inp
   vinp = VU.fromList . P.map toUpper $ inp
   arr  = runST (nussinov78Fill $ vinp)
-  bt   = [] -- backtrack vinp arr
+  bt   = backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
 -- type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
@@ -153,7 +159,6 @@ fillTable (MTbl tbl, f) = do
 
 -- * backtracking
 
-{-
 backtrack (inp :: VU.Vector Char) (tbl :: Z.U DIM2 Int) = unId . SM.toList . unId $ g (0,n) where
   n = VU.length inp
   c = Chr inp
@@ -161,5 +166,4 @@ backtrack (inp :: VU.Vector Char) (tbl :: Z.U DIM2 Int) = unId . SM.toList . unI
   t = bttblE tbl (g :: BTfun Id String)
   (_,g) = gNussinov (aPairmax <** aPretty) t c e
 {-# INLINE backtrack #-}
--}
 
