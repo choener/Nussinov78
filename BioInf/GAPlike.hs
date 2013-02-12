@@ -22,7 +22,7 @@ import Data.Vector.Fusion.Stream.Monadic as SM
 import Data.Vector.Fusion.Stream.Size
 import Data.Vector.Fusion.Util
 import Prelude as P
-import "PrimitiveArray" Data.Array.Repa.Index
+import Data.Array.Repa.Index
 import qualified Data.Vector.Unboxed as VU
 
 import ADP.Fusion.GAPlike hiding (E)
