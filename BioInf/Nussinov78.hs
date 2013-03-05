@@ -1,167 +1,188 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DoAndIfThenElse #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-
--- | Strict, scalar nussinov78 algorithm.
 
 module BioInf.Nussinov78 where
 
-import Control.Arrow (first,second,(***))
 import Control.Monad
 import Control.Monad.Primitive
 import Control.Monad.ST
-import Control.Monad.State.Lazy
-import "PrimitiveArray" Data.Array.Repa.Index
-import qualified Data.Vector.Fusion.Stream as P
-import qualified Data.Vector.Fusion.Stream.Monadic as S
+import Control.Monad.ST
+import Data.Char (toUpper, ord)
+import Data.Primitive
+import Data.Vector.Fusion.Stream as S
+import Data.Vector.Fusion.Stream.Monadic as SM
+import Data.Vector.Fusion.Stream.Size
+import Data.Vector.Fusion.Util
+import Prelude as P
+import Data.Array.Repa.Index
 import qualified Data.Vector.Unboxed as VU
 
-import Biobase.Primary
-import Biobase.Secondary.Vienna
-
-import Data.PrimitiveArray
-import Data.PrimitiveArray.Unboxed.Zero
-
+--import ADP.Fusion.GAPlike hiding (E)
+--import qualified ADP.Fusion.GAPlike as GAP
+import Data.PrimitiveArray as PA
+import Data.PrimitiveArray.Zero as Z
 import ADP.Fusion
-import ADP.Fusion.Monadic
-import ADP.Fusion.Monadic.Internal
+import ADP.Fusion.Apply
+import ADP.Fusion.Empty
+import ADP.Fusion.Table
+import ADP.Fusion.Chr
+import Data.Array.Repa.Index.Subword
+
+import Debug.Trace
+import Control.Arrow (second)
+import System.IO.Unsafe
 
 
 
--- | Simple RNA folding with basepair maximization.
+-- The signature
 
-nussinov78 inp = arr `seq` bt where
-  (_,Z:._:.n) = bounds arr
-  arr = runST (nussinov78Fill . mkPrimary $ inp)
-  bt  = nussinov78BT (mkPrimary inp) arr
-{-# NOINLINE nussinov78 #-}
+type Signature m a r =
+  ( ()   -> a
+  , Char -> a    -> a
+  , a    -> Char -> a
+  , Char -> a    -> Char -> a
+  , a    -> a    -> a
+  , SM.Stream m a -> m r
+  )
 
--- | The actual Nussinov78 folding algorithm.
+-- the grammar
 
-nussinov78Fill :: Primary -> ST s (Arr0 DIM2 Int)
-nussinov78Fill inp = do
-  let base = base' inp
-      {-# INLINE base #-}
-  let n = let (_,Z:.l) = bounds inp in l+1
-  s <- fromAssocsM (Z:.0:.0) (Z:.n:.n) 0 []
+--gNussinov :: Signature m a r -> MTable a -> Chr Char -> Empty -> (MTable a, Subword -> m r)
+gNussinov (empty,left,right,pair,split,h) s b e =
+  ( s, (
+          empty <<< e         |||
+          left  <<< b % s     |||
+          right <<<     s % b |||
+          pair  <<< b % s % b |||
+          split <<<  s  % s   ... h
+      )
+  ) -- where s' = transToN s
+{-# INLINE gNussinov #-}
 
-  fillTable s (
-                nil   <<< empty               |||
-                left  <<< base -~~ s          |||
-                right <<<          s ~~- base |||
-                pair  <<< base -~~ s ~~- base |||
-                split <<<       s +~+ s       ... h
-              )
-  freeze s
-{-# INLINE nussinov78Fill #-}
+-- pairmax algebra
 
--- | Fill the single table with values in an orderly fashion. The order in
--- which we fill depends on the algorithm.
+aPairmax :: (Monad m) => Signature m Int Int
+aPairmax = (empty,left,right,pair,split,h) where
+  empty   _   = 0
+  left    b s = s
+  right s b   = s
+  pair  l s r = if basepair l r then 1+s else -999999
+  split  l r  = l+r
+  {-# INLINE split #-}
+  h = SM.foldl1' max
+  {-# INLINE h #-}
+{-# INLINE aPairmax #-}
 
-fillTable :: PrimMonad m => MArr0 (PrimState m) DIM2 Int -> (DIM2 -> m Int) -> m ()
-fillTable tbl f = do
-  let (_,Z:.n:._) = boundsM tbl
-  forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
-    v <- f (Z:.i:.j)
-    writeM tbl (Z:.i:.j) v
-    return ()
-{-# INLINE fillTable #-}
-
--- | Request the single character enclosed by (i,i+1), with i+1==j
-
-base' :: Primary -> DIM2 -> (Scalar Nuc)
-base' inp (Z:.i:.j) = Scalar $ inp ! (Z:.i)
-{-# INLINE base' #-}
-
--- | True, if the subword at ij is empty.
-
-empty :: DIM2 -> Scalar Bool
-empty (Z:.i:.j) = Scalar $ i==j
-
--- | The base case of our recursion.
-
-nil :: Bool -> Int
-nil b = if b then 0 else -999999
-
--- | A single nucleotide to the left. Note that "x" is monadic. In 'nussinov'
--- we are in the ST monad, here we just know that we are in a monad.
-
-left :: Nuc -> Int -> Int
-left l x = x
-{-# INLINE left #-}
-
--- | A single nucleotide to the right.
-
-right :: Int -> Nuc -> Int
-right x r = x
-{-# INLINE right #-}
-
--- | Pair function
-
-pair :: Nuc -> Int -> Nuc -> Int
-pair l x r
-  | basepair l r = x+1
-  | otherwise    = -999999
-{-# INLINE pair #-}
-
--- | Combine the partition of x next-to y.
-
-split :: Int -> Int -> Int
-split = (+)
-{-# INLINE split #-}
-
--- | Determine if two characters form a legal basepair.
-
-basepair l r
-  | mkViennaPair (l,r) /= vpNS = True
-basepair _   _   = False
+basepair :: Char -> Char -> Bool
+basepair l r = f l r where
+  f 'C' 'G' = True
+  f 'G' 'C' = True
+  f 'A' 'U' = True
+  f 'U' 'A' = True
+  f 'G' 'U' = True
+  f 'U' 'G' = True
+  f _   _   = False
 {-# INLINE basepair #-}
 
--- | the grammar makes sure that we at least have "nil #<< empty" in the stream
-h = S.foldl1' max
-{-# INLINE h #-}
+{-
+aPretty :: (Monad m) => Signature m String (SM.Stream m String)
+aPretty = (empty,left,right,pair,split,h) where
+  empty _     = ""
+  left  b s   = "." P.++ s
+  right   s b = s P.++ "."
+  pair  l s r = "(" P.++ s P.++ ")"
+  split l   r = l P.++ r
+  h = return . id
+{-# INLINE aPretty #-}
+
+type CombSignature m e b =
+  ( () -> (e, m (SM.Stream m b))
+  , Char -> (e, m (SM.Stream m b)) -> (e, m (SM.Stream m b))
+  , (e, m (SM.Stream m b)) -> Char -> (e, m (SM.Stream m b))
+  , Char -> (e, m (SM.Stream m b)) -> Char -> (e, m (SM.Stream m b))
+  , (e, m (SM.Stream m b)) -> (e, m (SM.Stream m b)) -> (e, m (SM.Stream m b))
+  , SM.Stream m (e, m (SM.Stream m b)) -> m (SM.Stream m b)
+  )
+
+instance Show (Id [String]) where
+  show xs = show $ unId xs
+
+(<**)
+  :: (Monad m, Eq b, Eq e, Show e, Show (m [b]))
+  => Signature m e e
+  -> Signature m b (SM.Stream m b)
+  -> CombSignature m e b
+(<**) f s = (empty,left,right,pair,split,h) where
+  (emptyF,leftF,rightF,pairF,splitF,hF) = f
+  (emptyS,leftS,rightS,pairS,splitS,hS) = s
+
+  empty e         = (emptyF e   , return $ SM.singleton (emptyS e))
+  left b (x,ys)   = (leftF b x  , ys >>= return . SM.map (\y -> leftS b y  ))
+  right  (x,ys) b = (rightF x b , ys >>= return . SM.map (\y -> rightS  y b))
+  pair l (x,ys) r = (pairF l x r, ys >>= return . SM.map (\y -> pairS l y r))
+  split (x,ys) (s,ts) = (splitF x s, ys >>= \ys' -> ts >>= \ts' -> return $ SM.concatMap (\y -> SM.map (\t -> splitS y t) ts') ys')
+  h xs = do
+    hfs <- hF $ SM.map fst xs
+    let phfs = SM.concatMapM snd . SM.filter ((hfs==) . fst) $ xs
+    -- trace (">>>" P.++ show (hfs, SM.toList phfs)) $ hS phfs
+    hS phfs
+-}
+
+-- * Boilerplate and driver, will be moved to library
 
 
+nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
+  (_,Z:.Subword (_:.n)) = bounds arr
+  len  = P.length inp
+  vinp = VU.fromList . P.map toUpper $ inp
+  arr  = unsafePerformIO (nussinov78Fill $ vinp)
+  bt   = [] :: [String] -- backtrack vinp arr
+{-# NOINLINE nussinov78 #-}
 
--- * backtrace secondary structures
+-- type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
 
-type Backtrace = (Int,String)
+--nussinov78Fill :: forall s . VU.Vector Char -> ST s (Z.U (Z:.Subword) Int)
+nussinov78Fill :: VU.Vector Char -> IO (Z.U (Z:.Subword) Int)
+nussinov78Fill inp = do
+  let n = VU.length inp
+  !t' <- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
+  let t = MTable True t' -- mtblE t'
+      {-# INLINE t #-}
+  let b = Chr inp
+      {-# INLINE b #-}
+  let e = Empty
+      {-# INLINE e #-}
+  fillTable $ gNussinov aPairmax t b e
+  freeze t'
+{-# NOINLINE nussinov78Fill #-}
 
-nussinov78BT :: Primary -> Arr0 DIM2 Int -> [Backtrace]
-nussinov78BT inp s = P.toList $ grammar (Z:.0:.n) where
-  base = base' inp
-  n = let (_,(Z:._:.l)) = bounds s in l
-  s' :: DIM2 -> Scalar (DIM2,Int)
-  s' ij = Scalar $ (ij,s!ij)
+fillTable :: PrimMonad m => (MTable (Z.MU m (Z:.Subword) Int), (Subword -> m Int)) -> m ()
+fillTable (MTable _ tbl, f) = do
+  let (_,Z:.Subword (0:.n)) = boundsM tbl
+  forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
+    v <- i `seq` j `seq` (f $ subword i j)
+    v `seq` writeM tbl (Z:.subword i j) v
+{-# INLINE fillTable #-}
 
-  grammar :: DIM2 -> P.Stream Backtrace
-  grammar = (
-      nilBT   <<< empty                |||
-      leftBT  <<< base -~~ s'          |||
-      rightBT <<<          s' ~~- base |||
-      pairBT  <<< base -~~ s' ~~- base |||
-      splitBT <<<      s' +~+ s'       ..@ hBT)
+{-
 
-  nilBT :: Bool -> (Int, P.Stream Backtrace)
-  nilBT b      = if b then (0, P.singleton (0,"")) else (0, P.empty)
+-- * backtracking
 
-  leftBT :: Nuc -> (DIM2,Int) -> (Int, P.Stream Backtrace)
-  leftBT _ (ij,x)   = (x, P.map (second ("."++)) $ grammar ij)
+backtrack (inp :: VU.Vector Char) (tbl :: Z.U DIM2 Int) = unId . SM.toList . unId $ g (0,n) where
+  n = VU.length inp
+  c = Chr inp
+  e = Empty
+  t = bttblE tbl (g :: BTfun Id String)
+  (_,g) = gNussinov (aPairmax <** aPretty) t c e
+{-# INLINE backtrack #-}
 
-  rightBT :: (DIM2,Int) -> Nuc -> (Int, P.Stream Backtrace)
-  rightBT (ij,x) _  = (x, P.map (second (++".")) $ grammar ij)
-
-  pairBT :: Nuc -> (DIM2,Int) -> Nuc -> (Int, P.Stream Backtrace)
-  pairBT l (ij,x) r = if basepair l r then (x+1, P.map (second (\a -> "("++a++")")) $ grammar ij) else (0, P.empty)
-
-  splitBT :: (DIM2,Int) -> (DIM2,Int) -> (Int, P.Stream Backtrace)
-  splitBT (ij,x) (kl,y)  = (x+y, P.concatMap (\(s1,bts1) -> P.map (\(s2,bts2) -> (s1+s2,bts1++bts2)) $ grammar kl) $ grammar ij)
-
-  hBT ij = P.concatMap (\(score,bts) -> P.map (first (const score)) bts) . P.filter (\(score,bts) -> score == s!ij)
+-}
 

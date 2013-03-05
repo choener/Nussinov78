@@ -9,7 +9,7 @@ import Text.Printf
 import System.Environment
 
 -- import BioInf.Nussinov78
-import qualified BioInf.GAPlike as G
+import qualified BioInf.Nussinov78 as G
 
 
 
