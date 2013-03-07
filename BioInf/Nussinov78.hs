@@ -62,9 +62,10 @@ gNussinov (empty,left,right,pair,split,h) s b e =
           left  <<< b % s     |||
           right <<<     s % b |||
           pair  <<< b % s % b |||
-          split <<<  s  % s   ... h
+          split <<<  s' % s'  ... h
       )
-  ) -- where s' = transToN s
+  )  where MTable _ v' = s
+           s' = MTable Tsome v'
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
@@ -153,7 +154,7 @@ nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
 nussinov78Fill :: VU.Vector Char -> IO (Z.U (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
-  !t' <- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
+  !t' <- newWithM (Z:.subword 0 0) (Z:.subword 0 n) 0 -- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
   let t = MTable Tmany t'
       {-# INLINE t #-}
   let b = Chr inp
