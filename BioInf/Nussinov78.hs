@@ -154,7 +154,7 @@ nussinov78Fill :: VU.Vector Char -> IO (Z.U (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   !t' <- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
-  let t = MTable True t' -- mtblE t'
+  let t = MTable Tmany t'
       {-# INLINE t #-}
   let b = Chr inp
       {-# INLINE b #-}
