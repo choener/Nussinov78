@@ -53,8 +53,8 @@ library
   exposed-modules:
     BioInf.Nussinov78
   ghc-options:
---    -fnew-codegen -fllvm -O2 -funbox-strict-fields -optlo-O3 -optlo-std-compile-opts
     -Odph
+    -O2
     -funbox-strict-fields
     -funfolding-use-threshold100
     -funfolding-keeness-factor100
@@ -62,6 +62,8 @@ library
 --    -fnew-codegen
     -fllvm
     -optlo-O3
+    -optc-O3
+    -optc-march=native
     -optlo-std-compile-opts
 --    -fllvm-tbaa
 
@@ -75,12 +77,16 @@ executable Nussinov78
 --    BioInf.Nussinov78
   ghc-options:
     -Odph
+    -O2
     -funbox-strict-fields
     -funfolding-use-threshold100
     -funfolding-keeness-factor100
+--    -fno-spec-constr-threshold -fspec-constr-count=20
 --    -fnew-codegen
     -fllvm
     -optlo-O3
+    -optc-O3
+    -optc-march=native
     -optlo-std-compile-opts
 --    -fllvm-tbaa
 
