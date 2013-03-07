@@ -78,7 +78,8 @@ aPairmax = (empty,left,right,pair,split,h) where
   pair  l s r = if basepair l r then 1+s else -999999
   split  l r  = l+r
   {-# INLINE split #-}
-  h = SM.foldl' max (-999999) -- SM.foldl1' max
+  h = SM.foldl' max (-999999)
+--  h = SM.foldl1' max
   {-# INLINE h #-}
 {-# INLINE aPairmax #-}
 
