@@ -49,7 +49,8 @@ library
     ghc-prim,
     repa,
     deepseq,
-    QuickCheck
+    QuickCheck,
+    strict
   exposed-modules:
     BioInf.Nussinov78
   ghc-options:

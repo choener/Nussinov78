@@ -28,13 +28,14 @@ import qualified Data.Vector.Unboxed as VU
 --import ADP.Fusion.GAPlike hiding (E)
 --import qualified ADP.Fusion.GAPlike as GAP
 import Data.PrimitiveArray as PA
-import Data.PrimitiveArray.Zero as Z
+import Data.PrimitiveArray.Zero as PA
 import ADP.Fusion
 import ADP.Fusion.Apply
-import ADP.Fusion.Empty
-import ADP.Fusion.Table
-import ADP.Fusion.Chr
+--import ADP.Fusion.Empty
+--import ADP.Fusion.Table
+--import ADP.Fusion.Chr
 import Data.Array.Repa.Index.Subword
+import Data.PrimitiveArray.FillTables
 
 import Debug.Trace
 import Control.Arrow (second)
@@ -64,8 +65,8 @@ gNussinov (empty,left,right,pair,split,h) s b e =
           pair  <<< b % s % b |||
           split <<<  s' % s'  ... h
       )
-  )  where MTable _ v' = s
-           s' = MTable Enone v'
+  )  where MTbl _ v' = s
+           s' = MTbl True v'
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
@@ -94,7 +95,6 @@ basepair l r = f l r where
   f _   _   = False
 {-# INLINE basepair #-}
 
-{-
 aPretty :: (Monad m) => Signature m String (SM.Stream m String)
 aPretty = (empty,left,right,pair,split,h) where
   empty _     = ""
@@ -136,7 +136,6 @@ instance Show (Id [String]) where
     let phfs = SM.concatMapM snd . SM.filter ((hfs==) . fst) $ xs
     -- trace (">>>" P.++ show (hfs, SM.toList phfs)) $ hS phfs
     hS phfs
--}
 
 -- * Boilerplate and driver, will be moved to library
 
@@ -149,42 +148,39 @@ nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
   bt   = [] :: [String] -- backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
--- type TBL s = Tbl E (PA.MArr0 s DIM2 Int)
 
 --nussinov78Fill :: forall s . VU.Vector Char -> ST s (Z.U (Z:.Subword) Int)
-nussinov78Fill :: VU.Vector Char -> IO (Z.U (Z:.Subword) Int)
+nussinov78Fill :: VU.Vector Char -> IO (PA.Unboxed (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   !t' <- newWithM (Z:.subword 0 0) (Z:.subword 0 n) 0 -- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
-  let t = MTable Eall t'
+  let t = MTbl False t'
       {-# INLINE t #-}
   let b = Chr inp
       {-# INLINE b #-}
   let e = Empty
       {-# INLINE e #-}
   fillTable $ gNussinov aPairmax t b e
+--  upperTriS (Z:.gNussinov aPairmax t b e)
   freeze t'
 {-# NOINLINE nussinov78Fill #-}
 
-fillTable :: PrimMonad m => (MTable (Z.MU m (Z:.Subword) Int), (Subword -> m Int)) -> m ()
-fillTable (MTable _ tbl, f) = do
+fillTable :: PrimMonad m => (MTbl (PA.MutArr m (PA.Unboxed (Z:.Subword) Int)), (Subword -> m Int)) -> m ()
+fillTable (MTbl _ tbl, f) = do
   let (_,Z:.Subword (0:.n)) = boundsM tbl
   forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
-    v <- i `seq` j `seq` (f $ subword i j)
+    v <- (f $ subword i j)
     v `seq` writeM tbl (Z:.subword i j) v
 {-# INLINE fillTable #-}
 
-{-
 
 -- * backtracking
 
-backtrack (inp :: VU.Vector Char) (tbl :: Z.U DIM2 Int) = unId . SM.toList . unId $ g (0,n) where
+backtrack (inp :: VU.Vector Char) (tbl :: PA.Unboxed (Z:.Subword) Int) = unId . SM.toList . unId $ g (0,n) where
   n = VU.length inp
   c = Chr inp
   e = Empty
   t = bttblE tbl (g :: BTfun Id String)
   (_,g) = gNussinov (aPairmax <** aPretty) t c e
 {-# INLINE backtrack #-}
-
--}
 
