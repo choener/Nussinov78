@@ -65,8 +65,8 @@ gNussinov (empty,left,right,pair,split,h) s b e =
           pair  <<< b % s % b |||
           split <<<  s' % s'  ... h
       )
-  )  where MTbl _ v' = s
-           s' = MTbl True v'
+  )  where -- MTbl _ v' = s
+           s' = toNonEmpty s -- MTbl True v'
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
@@ -145,7 +145,7 @@ nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
   len  = P.length inp
   vinp = VU.fromList . P.map toUpper $ inp
   arr  = unsafePerformIO (nussinov78Fill $ vinp)
-  bt   = [] :: [String] -- backtrack vinp arr
+  bt   = backtrack vinp arr -- [] :: [String] -- backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
 
@@ -154,7 +154,7 @@ nussinov78Fill :: VU.Vector Char -> IO (PA.Unboxed (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   !t' <- newWithM (Z:.subword 0 0) (Z:.subword 0 n) 0 -- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
-  let t = MTbl False t'
+  let t = MTbl EmptyT t'
       {-# INLINE t #-}
   let b = Chr inp
       {-# INLINE b #-}
@@ -176,11 +176,11 @@ fillTable (MTbl _ tbl, f) = do
 
 -- * backtracking
 
-backtrack (inp :: VU.Vector Char) (tbl :: PA.Unboxed (Z:.Subword) Int) = unId . SM.toList . unId $ g (0,n) where
+backtrack (inp :: VU.Vector Char) (tbl :: PA.Unboxed (Z:.Subword) Int) = unId . SM.toList . unId $ g $ subword 0 n where
   n = VU.length inp
   c = Chr inp
   e = Empty
-  t = bttblE tbl (g :: BTfun Id String)
+  t = BtTbl EmptyT tbl (g :: Subword -> Id (SM.Stream Id String))
   (_,g) = gNussinov (aPairmax <** aPretty) t c e
 {-# INLINE backtrack #-}
 
