@@ -31,9 +31,9 @@ import Data.PrimitiveArray as PA
 import Data.PrimitiveArray.Zero as PA
 import ADP.Fusion
 import ADP.Fusion.Apply
---import ADP.Fusion.Empty
---import ADP.Fusion.Table
---import ADP.Fusion.Chr
+import ADP.Fusion.Empty
+import ADP.Fusion.Classes
+import ADP.Fusion.Chr
 import Data.Array.Repa.Index.Subword
 import Data.PrimitiveArray.FillTables
 
@@ -56,8 +56,12 @@ type Signature m a r =
 
 -- the grammar
 
---gNussinov :: Signature m a r -> MTable a -> Chr Char -> Empty -> (MTable a, Subword -> m r)
-gNussinov (empty,left,right,pair,split,h) s b e =
+gNussinov
+  ((empty,left,right,pair,split,h) :: Signature m a r)
+  s
+  (b :: Chr Char)
+  (e :: Empty)
+  =
   ( s, (
           empty <<< e         |||
           left  <<< b % s     |||
@@ -65,8 +69,7 @@ gNussinov (empty,left,right,pair,split,h) s b e =
           pair  <<< b % s % b |||
           split <<<  s' % s'  ... h
       )
-  )  where -- MTbl _ v' = s
-           s' = toNonEmpty s -- MTbl True v'
+  )  where s' = toNonEmpty s
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
@@ -172,7 +175,6 @@ fillTable (MTbl _ tbl, f) = do
     v <- (f $ subword i j)
     v `seq` writeM tbl (Z:.subword i j) v
 {-# INLINE fillTable #-}
-
 
 -- * backtracking
 

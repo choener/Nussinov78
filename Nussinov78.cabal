@@ -44,7 +44,7 @@ library
     mtl            >= 2     ,
     primitive      >= 0.5   ,
     vector         >= 0.10  ,
---    PrimitiveArray >= 0.5   ,
+    PrimitiveArray >= 0.5.1 ,
 --    ADPfusion      >= 0.1.1 ,
     ghc-prim,
     repa,
