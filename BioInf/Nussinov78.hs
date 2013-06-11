@@ -30,6 +30,7 @@ import qualified Data.Vector.Unboxed as VU
 import Data.PrimitiveArray as PA
 import Data.PrimitiveArray.Zero as PA
 import ADP.Fusion
+import ADP.Fusion.Table
 import ADP.Fusion.Apply
 import ADP.Fusion.Empty
 import ADP.Fusion.Classes
@@ -59,7 +60,7 @@ type Signature m a r =
 gNussinov
   ((empty,left,right,pair,split,h) :: Signature m a r)
   s
-  (b :: Chr Char)
+  (b :: GChr Char Char)
   (e :: Empty)
   =
   ( s, (
@@ -69,7 +70,8 @@ gNussinov
           pair  <<< b % s % b |||
           split <<<  s' % s'  ... h
       )
-  )  where s' = toNonEmpty s
+  )  where MTbl _ ss = s
+           s' = mTblSw NonEmptyT ss
 {-# INLINE gNussinov #-}
 
 -- pairmax algebra
@@ -148,7 +150,7 @@ nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
   len  = P.length inp
   vinp = VU.fromList . P.map toUpper $ inp
   arr  = unsafePerformIO (nussinov78Fill $ vinp)
-  bt   = backtrack vinp arr -- [] :: [String] -- backtrack vinp arr
+  bt   = [] :: [String] -- backtrack vinp arr -- [] :: [String] -- backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
 
@@ -157,9 +159,9 @@ nussinov78Fill :: VU.Vector Char -> IO (PA.Unboxed (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   !t' <- newWithM (Z:.subword 0 0) (Z:.subword 0 n) 0 -- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
-  let t = MTbl EmptyT t'
+  let t = mTblSw EmptyT t'
       {-# INLINE t #-}
-  let b = Chr inp
+  let b = chr inp
       {-# INLINE b #-}
   let e = Empty
       {-# INLINE e #-}
@@ -168,7 +170,7 @@ nussinov78Fill inp = do
   freeze t'
 {-# NOINLINE nussinov78Fill #-}
 
-fillTable :: PrimMonad m => (MTbl (PA.MutArr m (PA.Unboxed (Z:.Subword) Int)), (Subword -> m Int)) -> m ()
+fillTable :: PrimMonad m => (MTbl Subword (PA.MutArr m (PA.Unboxed (Z:.Subword) Int)), (Subword -> m Int)) -> m ()
 fillTable (MTbl _ tbl, f) = do
   let (_,Z:.Subword (0:.n)) = boundsM tbl
   forM_ [n,n-1..0] $ \i -> forM_ [i..n] $ \j -> do
@@ -178,11 +180,12 @@ fillTable (MTbl _ tbl, f) = do
 
 -- * backtracking
 
+{-
 backtrack (inp :: VU.Vector Char) (tbl :: PA.Unboxed (Z:.Subword) Int) = unId . SM.toList . unId $ g $ subword 0 n where
   n = VU.length inp
-  c = Chr inp
+  c = chr inp
   e = Empty
-  t = BtTbl EmptyT tbl (g :: Subword -> Id (SM.Stream Id String))
+  t = btTbl EmptyT tbl (g :: Subword -> Id (SM.Stream Id String))
   (_,g) = gNussinov (aPairmax <** aPretty) t c e
 {-# INLINE backtrack #-}
-
+-}
