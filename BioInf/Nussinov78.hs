@@ -82,10 +82,7 @@ aPairmax = (empty,left,right,pair,split,h) where
   right s b   = s
   pair  l s r = if basepair l r then 1+s else -999999
   split  l r  = l+r
-  {-# INLINE split #-}
   h = SM.foldl' max (-999999)
---  h = SM.foldl1' max
-  {-# INLINE h #-}
 {-# INLINE aPairmax #-}
 
 basepair :: Char -> Char -> Bool
@@ -118,8 +115,8 @@ type CombSignature m e b =
   , SM.Stream m (e, m (SM.Stream m b)) -> m (SM.Stream m b)
   )
 
-instance Show (Id [String]) where
-  show xs = show $ unId xs
+--instance Show (Id [String]) where
+--  show xs = show $ unId xs
 
 (<**)
   :: (Monad m, Eq b, Eq e, Show e, Show (m [b]))
@@ -148,13 +145,12 @@ nussinov78 inp = (arr ! (Z:.subword 0 n),bt) where
   (_,Z:.Subword (_:.n)) = bounds arr
   len  = P.length inp
   vinp = VU.fromList . P.map toUpper $ inp
-  arr  = unsafePerformIO (nussinov78Fill $ vinp)
+  arr  = runST (nussinov78Fill $ vinp)
   bt   = backtrack vinp arr -- [] :: [String] -- backtrack vinp arr
 {-# NOINLINE nussinov78 #-}
 
 
---nussinov78Fill :: forall s . VU.Vector Char -> ST s (Z.U (Z:.Subword) Int)
-nussinov78Fill :: VU.Vector Char -> IO (PA.Unboxed (Z:.Subword) Int)
+nussinov78Fill :: VU.Vector Char -> ST s (PA.Unboxed (Z:.Subword) Int)
 nussinov78Fill inp = do
   let n = VU.length inp
   !t' <- newWithM (Z:.subword 0 0) (Z:.subword 0 n) 0 -- fromAssocsM (Z:.subword 0 0) (Z:.subword 0 n) 0 []
