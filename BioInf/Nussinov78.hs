@@ -119,7 +119,7 @@ type CombSignature m e b =
 --  show xs = show $ unId xs
 
 (<**)
-  :: (Monad m, Eq b, Eq e, Show e, Show (m [b]))
+  :: (Monad m, Eq b, Eq e) -- , Show e, Show (m [b]))
   => Signature m e e
   -> Signature m b (SM.Stream m b)
   -> CombSignature m e b
